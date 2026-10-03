@@ -1,6 +1,6 @@
 {
   "name": "cool-lab",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "COOL : application web de gestion de laboratoire éducatif",
   "private": true,
   "type": "module",
