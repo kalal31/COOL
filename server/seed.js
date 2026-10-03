@@ -7,6 +7,16 @@ const day = (offset) => {
   return todayISO(d);
 };
 
+/** Date du k-ième jour ouvré après aujourd'hui (pour que le planning de démo ressemble à une vraie semaine). */
+const schoolDay = (k) => {
+  const d = new Date();
+  for (let n = k; n > 0;) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() % 6 !== 0) n -= 1;
+  }
+  return todayISO(d);
+};
+
 /** Crée le compte administrateur, et les données de démonstration si `demo`, quand la base est vide. */
 export async function seedIfEmpty(db, { demo, adminEmail, adminPassword, demoPassword }) {
   if (db.prepare('SELECT COUNT(*) AS n FROM users').get().n > 0) return null;
@@ -150,10 +160,10 @@ export async function seedDemo(db, password) {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, roomId, practicalId, groupId, teacher, title, date, start, end, stations);
   booking(chimieA, tpDosage, premiere, u.prof, 'Dosage acido-basique par titrage pH-métrique', day(0), '08:00', '10:00', 11);
   booking(physique, tpOhm, seconde, u.sophie, 'Loi d’Ohm et caractéristique d’un dipôle', day(0), '14:00', '16:00', 5);
-  booking(svt, tpMicro, bts, u.sophie, 'Observation de cellules végétales au microscope', day(1), '10:00', '11:30', 7);
-  booking(chimieA, tpDosage, premiere, u.prof, 'Dosage acido-basique (séance 2)', day(2), '08:00', '10:00', 11);
-  booking(physique, tpOhm, seconde, u.sophie, 'Loi d’Ohm (groupe B)', day(3), '10:00', '12:00', 5);
-  booking(chimieA, tpPerm, terminale, u.prof, 'Dosage d’oxydoréduction au permanganate', day(25), '14:00', '16:30', 10);
+  booking(svt, tpMicro, bts, u.sophie, 'Observation de cellules végétales au microscope', schoolDay(1), '10:00', '11:30', 7);
+  booking(chimieA, tpDosage, premiere, u.prof, 'Dosage acido-basique (séance 2)', schoolDay(2), '08:00', '10:00', 11);
+  booking(physique, tpOhm, seconde, u.sophie, 'Loi d’Ohm (groupe B)', schoolDay(3), '10:00', '12:00', 5);
+  booking(chimieA, tpPerm, terminale, u.prof, 'Dosage d’oxydoréduction au permanganate', schoolDay(20), '14:00', '16:30', 10);
 
   const loan = (equipmentId, borrower, qty, loanedAt, due, returnedAt = null, notes = null) =>
     insert(`INSERT INTO loans (equipment_id, borrower_id, quantity, loaned_at, due_date, returned_at, notes)

@@ -167,8 +167,8 @@ test('la fiche de préparation signale les manques de matériel, de produit et l
   await sophie('PUT', `/api/bookings/${ohm.id}`, { stations: 4 });
   assert.equal((await tech('GET', `/api/bookings/${ohm.id}/preparation`)).body.ready, true, '4 postes = 8 multimètres');
 
-  // Le permanganate périme avant la séance prévue dans 25 jours
-  const perm = (await prof('GET', `/api/bookings?from=${day(25)}&to=${day(25)}`)).body[0];
+  // Le permanganate périme (dans 20 jours) avant la séance prévue 20 jours ouvrés plus tard
+  const perm = (await prof('GET', `/api/bookings?from=${day(15)}&to=${day(60)}`)).body.find((b) => b.title.startsWith('Dosage d’oxydoréduction'));
   const permPrep = (await prof('GET', `/api/bookings/${perm.id}/preparation`)).body;
   assert.equal(permPrep.reagents.find((r) => r.name.startsWith('Permanganate')).expired, true);
   assert.equal(permPrep.ready, false);

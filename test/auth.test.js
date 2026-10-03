@@ -112,3 +112,28 @@ test('la gestion des utilisateurs est réservée à l’administrateur et protè
   const student = await app.login('eleve@lab.local');
   assert.equal((await student('GET', '/api/users/people')).status, 403);
 });
+
+test('un cookie de session mal formé est traité comme une absence de session (401, pas 500)', async () => {
+  const api = app.anon();
+  for (const cookie of ['lab_session=%E0%A4%A', 'lab_session=%', '=;;;', 'lab_session=' + 'a'.repeat(5000)]) {
+    const res = await api('GET', '/api/auth/me', undefined, { Cookie: cookie });
+    assert.equal(res.status, 401, cookie.slice(0, 30));
+  }
+});
+
+test('une session expirée est refusée, supprimée, et les sessions expirées sont purgées à la connexion', async () => {
+  const userId = app.id("SELECT id FROM users WHERE email = 'eleve@lab.local'");
+  const count = () => app.db.prepare('SELECT COUNT(*) AS n FROM auth_sessions WHERE user_id = ?').get(userId).n;
+  const first = await app.login('eleve@lab.local');
+  await app.login('eleve@lab.local'); // une seconde session, jamais réutilisée
+  assert.equal((await first('GET', '/api/auth/me')).status, 200);
+  const total = count();
+  assert.ok(total >= 2);
+
+  app.db.prepare('UPDATE auth_sessions SET expires_at = ? WHERE user_id = ?').run(Date.now() - 1000, userId);
+  assert.equal((await first('GET', '/api/auth/me')).status, 401);
+  assert.equal(count(), total - 1, 'la session utilisée est supprimée dès son refus');
+
+  await app.login('eleve@lab.local');
+  assert.equal(count(), 1, 'une nouvelle connexion purge les sessions expirées restantes');
+});

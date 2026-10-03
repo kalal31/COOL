@@ -24,6 +24,8 @@ export async function verifyPassword(password, stored) {
 const sha256 = (s) => createHash('sha256').update(s).digest('hex');
 
 export function createSession(db, userId) {
+  // Purge des sessions expirées jamais réutilisées, pour que la table ne grossisse pas indéfiniment.
+  db.prepare('DELETE FROM auth_sessions WHERE expires_at < ?').run(Date.now());
   const token = randomBytes(32).toString('hex');
   db.prepare('INSERT INTO auth_sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)')
     .run(sha256(token), userId, Date.now() + SESSION_TTL_MS);
@@ -42,7 +44,13 @@ export function parseCookies(header = '') {
   const out = {};
   for (const part of header.split(';')) {
     const i = part.indexOf('=');
-    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    if (i <= 0) continue;
+    const raw = part.slice(i + 1).trim();
+    try {
+      out[part.slice(0, i).trim()] = decodeURIComponent(raw);
+    } catch {
+      out[part.slice(0, i).trim()] = raw; // cookie mal encodé : on garde la valeur brute (elle sera simplement inconnue)
+    }
   }
   return out;
 }
